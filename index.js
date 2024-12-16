@@ -22,6 +22,16 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
+    const database = client.db("jobPortal");
+    const jobsCollection = database.collection("jobs");
+
+    // get all job from db;
+    app.get('/jobs',async(req,res)=>{
+      const cursor = jobsCollection.find()
+      const result = await cursor.toArray();
+      res.send(result)
+    })
+
     // Send a ping to confirm a successful connection
     await client.db('admin').command({ ping: 1 })
     console.log(
@@ -37,4 +47,4 @@ app.get('/', (req, res) => {
   res.send('Hello from SoloSphere Server....')
 })
 
-app.listen(port, () => console.log(`Server running on port ${port}`))
+app.listen(port, () => console.log(`Server is running at http://localhost:${port}`))

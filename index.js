@@ -24,6 +24,7 @@ async function run() {
   try {
     const database = client.db("jobPortal");
     const jobsCollection = database.collection("jobs");
+    const applicationCollection = database.collection("jobApplication");
 
     // get all job from db;
     app.get('/jobs',async(req,res)=>{
@@ -36,6 +37,14 @@ async function run() {
       const query = {_id: new ObjectId(id)}
       const result = await jobsCollection.findOne(query);
       res.send(result)
+    })
+
+    // create application in db
+    app.post('/job_application',async(req,res)=>{
+        const applicationData = req.body;
+        const result = await applicationCollection.insertOne(applicationData)
+        res.send(result)
+
     })
 
     // Send a ping to confirm a successful connection

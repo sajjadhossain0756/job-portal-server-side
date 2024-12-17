@@ -39,6 +39,25 @@ async function run() {
       res.send(result)
     })
 
+    // get user application data from db
+    app.get('/job_application',async(req,res)=>{
+       const email = req.query.email;
+       const query = {applicant_email: email}
+       const result = await applicationCollection.find(query).toArray()
+
+      //  fokira way
+      for(const application of result){
+         const query1 = {_id: new ObjectId(application.job_id)}
+         const job = await jobsCollection.findOne(query1)
+         if(job){
+            application.title = job.title;
+            application.company = job.company;
+            application.company_logo = job.company_logo
+         }
+      }
+       res.send(result)
+    })
+
     // create application in db
     app.post('/job_application',async(req,res)=>{
         const applicationData = req.body;

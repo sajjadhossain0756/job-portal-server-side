@@ -1,14 +1,40 @@
 const express = require('express')
 const cors = require('cors')
+const jwt = require('jsonwebtoken')
+const cookieParser = require('cookie-parser')
+
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb')
 require('dotenv').config()
 
 const port = process.env.PORT || 9000
 const app = express()
 
-app.use(cors())
+app.use(cors({
+   origin: [
+    'http://localhost:5173',
+    'https://job-portal-project-ce2d8.web.app/',
+    'https://job-portal-project-ce2d8.firebaseapp.com/'
+   ],
+   credentials: true
+}))
 app.use(express.json())
+app.use(cookieParser())
 
+const verifyToken = (req,res,next) =>{
+     const token = req.cookies?.token;
+     if(!token){
+        return res.status(401).send({message: 'unAthorize Access'})
+     }
+    // verify token
+    jwt.verify(token,process.env.ACCESS_TOKEN,(err,decoded)=>{
+        if(err){
+          return res.status(401).send({message: 'unAthorize Access'})
+        }
+        req.user = decoded;
+        next()
+    }) 
+     
+}
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ahkjv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -52,9 +78,13 @@ async function run() {
     })
 
     // get user application data from db
-    app.get('/job_application',async(req,res)=>{
+    app.get('/job_application',verifyToken,async(req,res)=>{
        const email = req.query.email;
        const query = {applicant_email: email}
+      //  check valid user
+       if(req.user.email !== req.query.email){
+           return res.status(403).send({message: 'forbidden'})
+       }
        const result = await applicationCollection.find(query).toArray()
 
       //  fokira way
@@ -76,8 +106,29 @@ async function run() {
         const result = await applicationCollection.find(query).toArray()
         res.send(result)
     })
+    // json web token api
+    app.post('/jwt',(req,res)=>{
+        const user = req.body
+        const token = jwt.sign(user,process.env.ACCESS_TOKEN,{
+          expiresIn: '1h'
+        })
+        
+        res.cookie('token',token,{
+           httpOnly: true,
+           secure: false //its will be when its render for production
+        })
+        .send({success: true})
+    })
+    // clear cookie 
+    app.post('/logout',(req,res)=>{
+       res.clearCookie('token',{
+          httpOnly: true,
+          secure: false
+       })
+       .send({success: true})
+    })
 
-    // create application in db
+    // create application in db]
     app.post('/job_application',async(req,res)=>{
         const applicationData = req.body;
         const result = await applicationCollection.insertOne(applicationData)
@@ -103,6 +154,19 @@ async function run() {
         const updateResult = await jobsCollection.updateOne(filter,updateDoc);
         res.send(result)
 
+    })
+    // update application status
+    app.patch('/job_application/:id',async(req,res)=>{
+       const id = req.params.id;
+       const data = req.body;
+       const filter = {_id: new ObjectId(id)}
+       const updateDoc = {
+           $set: {
+              status: data.status
+           }
+       }
+       const result = await applicationCollection.updateOne(filter,updateDoc)
+       res.send(result)
     })
 
     // Send a ping to confirm a successful connection

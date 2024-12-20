@@ -26,12 +26,19 @@ async function run() {
     const jobsCollection = database.collection("jobs");
     const applicationCollection = database.collection("jobApplication");
 
+    // create one data in db
+    app.post('/jobs', async(req,res)=>{
+        const jobs = req.body;
+        const result = await jobsCollection.insertOne(jobs)
+        res.send(result)
+    })
     // get all job from db;
     app.get('/jobs',async(req,res)=>{
       const cursor = jobsCollection.find()
       const result = await cursor.toArray();
       res.send(result)
     })
+    // get one data with id from db
     app.get('/jobs/:id',async(req,res)=>{
       const id = req.params.id;
       const query = {_id: new ObjectId(id)}
